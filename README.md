@@ -7,10 +7,12 @@ Please refer to __API Details__ for a list of the available interfaces.
 
 ## API details
 
+The service provide the following interfaces, note that each one also returns an extra HTTP header called __X-Minipedia-Version-Id__ that describe the version of the document being retrieved or updated. For more details please refer to the examples using the _Curl_ program.
+
 Interface | Method | Description |
 ----------|--------|-----|
 /Latest_plane_crash| GET | It retrieve the latest article about a crashed plane   |
-/Latest_plane_crash/update| POST | Fo |
+/Latest_plane_crash/update| POST | When the request is received and the body is greater than zero, update a new version of the document in a new ID. |
 
 ## Accessing through Curl
 
