@@ -66,11 +66,19 @@ X-Minipedia-Version-Id: 2
 Document updated: 166 bytes written
 ```
 
-## Updating an article
+## Updating Details
 
 When a request comes through the _update_ interface, it retrieve the latest ID for the article inside a critical section, it increments the counter and flush back the file to the disk.
 
 The critical section is protected through a Mutex, but of course this is not the right approach, it supposed to work in a database or in a local cache that support this kind of atomic operations.
+
+## Improvements for production
+
+- Implement co-routines to drop the blocking time of the Fibonacci function.
+- Drop Mutex in place by a remote Key/Value store
+- Implement Non-blocking Disk I/O to flush the content to disk
+- Smart articles ID based on a remote and safe database
+- Implement security on the API
 
 Author
 ======
