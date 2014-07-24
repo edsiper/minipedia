@@ -3,6 +3,18 @@
 This is a simple service implementing multiple editions of an article through
 a web service.
 
+The service is built on top of [Duda I/O](http://duda.io) stack, for further details to deploy this service please perform the following steps (only for Linux):
+
+```
+$ git clone https://github.com/monkey/dudac
+$ git clone https://github.com/edsiper/minipedia
+$ cd dudac/
+$ ./dudac -s
+$ ./dudac -w ../minipedia -p 8080
+```
+
+Now the service will be running on TCP port 8080.
+
 Please refer to __API Details__ for a list of the available interfaces.
 
 ## API details
