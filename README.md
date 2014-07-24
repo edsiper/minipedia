@@ -9,8 +9,8 @@ Please refer to __API Details__ for a list of the available interfaces.
 
 Interface | Method | Description |
 ----------|--------|-----|
-/Latest_crash_plane| GET | It retrieve the latest article about a crashed plane   |
-/Latest_crash_plane/update| POST | Fo |
+/Latest_plane_crash| GET | It retrieve the latest article about a crashed plane   |
+/Latest_plane_crash/update| POST | Fo |
 
 ## Accessing through Curl
 
@@ -19,7 +19,7 @@ The best way to see how the service behave is to use the _Curl_ program.
 ### Retrieving the latest article
 
 ```
-$ curl -i http://166.78.109.6:8080/Latest_crash_plane
+$ curl -i http://166.78.109.6:8080/Latest_plane_crash
 ```
 
 That command will return the HTTP headers plus the content, pay attention to the headers as they indicate which version is being retrieved:
@@ -66,14 +66,11 @@ X-Minipedia-Version-Id: 2
 Document updated: 166 bytes written
 ```
 
-## Internals
-
-
 ## Updating an article
 
 When a request comes through the _update_ interface, it retrieve the latest ID for the article inside a critical section, it increments the counter and flush back the file to the disk.
 
-The critical section is proteceted through a Mutex, but of course this is not the right approach, it supposed to work in a database or in a local cache that support this kind of atomic operations.
+The critical section is protected through a Mutex, but of course this is not the right approach, it supposed to work in a database or in a local cache that support this kind of atomic operations.
 
 Author
 ======
