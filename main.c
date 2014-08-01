@@ -13,22 +13,14 @@
 
 DUDA_REGISTER("Minipedia", "API Example");
 
+struct bundle {
+    duda_dthread_channel_t *chan;
+    duda_request_t *dr;
+};
+
 int latest_id;
 char *store_path;
 pthread_mutex_t mutex_article_id;
-
-int lazy_fibonacci(int n)
-{
-    if (n == 0) {
-        return 0;
-    }
-    else if (n == 1) {
-        return 1;
-    }
-    else {
-        return (lazy_fibonacci(n-1) + lazy_fibonacci(n-2));
-    }
-}
 
 /* It returns the latest plane crash report file path that can be served */
 static char *get_latest_plane_crash(int *id)
@@ -47,6 +39,68 @@ static char *get_latest_plane_crash(int *id)
 
     snprintf(path, max_path - 1, "%s/%i", store_path, *id);
     return path;
+}
+
+void consumer(void *data)
+{
+    int id;
+    int header_size = 64;
+    char *doc;
+    char *header_version;
+
+    struct bundle *bdl = data;
+    duda_dthread_channel_t *chan = bdl->chan;
+    duda_request_t *dr = bdl->dr;
+
+    while (!dthread->chan_done(chan)) {
+        int *n = dthread->chan_recv(chan);
+        //response->printf(dr, "%d\n", *n);
+        mem->free(n);
+    }
+
+    /* Get the latest document that can be send */
+    doc = get_latest_plane_crash(&id);
+
+    /*
+     * Just a fanzy HTTP header to let the client now which version of the
+     * article is getting.
+     */
+    header_version = mem->alloc(header_size);
+    snprintf(header_version, header_size - 1, "X-Minipedia-Version-Id: %i", id);
+
+    /* Register the buffers into the garbage collector */
+    gc->add(dr, doc);
+    gc->add(dr, header_version);
+
+    /* Compose the response and let the magic non-blocking work */
+    response->http_status(dr, 200);
+    response->http_header(dr, header_version);
+    response->http_content_type(dr, "html");
+    response->sendfile(dr, doc);
+    response->end(dr, NULL);
+}
+
+void producer(void *data)
+{
+    duda_dthread_channel_t *chan = data;
+    int num1 = 1;
+    int num2 = 1;
+    int i;
+
+    for (i = 0; i < 34; ++i) {
+        int *n = mem->alloc(sizeof(int));
+        if (i == 0) {
+            *n = num1;
+        } else if (i == 1) {
+            *n = num2;
+        } else {
+            *n = num1 + num2;
+            num1 = num2;
+            num2 = *n;
+        }
+        dthread->chan_send(chan, n);
+    }
+    dthread->chan_end(chan);
 }
 
 /* Home page */
@@ -115,36 +169,29 @@ void cb_latest_plane_crash_update(duda_request_t *dr)
     response->end(dr, NULL);
 }
 
-
+/*
+ * This callback will take care to prepare the duda-threads (co-routines)
+ * for Fibonacci calculation and then start processing the page content.
+ */
 void cb_latest_plane_crash(duda_request_t *dr)
 {
-    int id;
-    int header_size = 64;
-    char *doc;
-    char *header_version;
+    int cid;
+    int pid;
+    duda_dthread_channel_t *chan = dthread->chan_create(0, monkey->mem_free);
+    struct bundle *bdl = monkey->mem_alloc(sizeof(*bdl));
 
-    lazy_fibonacci(34);
+    /* Calculate Fibonacci using new duda-threads */
+    bdl->chan = chan;
+    bdl->dr = dr;
+    cid = dthread->create(consumer, bdl);
+    pid = dthread->create(producer, chan);
 
-    /* Get the latest document that can be send */
-    doc = get_latest_plane_crash(&id);
+    dthread->chan_set_sender(chan, pid);
+    dthread->chan_set_receiver(chan, cid);
+    dthread->resume(cid);
+    dthread->chan_free(chan);
 
-    /*
-     * Just a fanzy HTTP header to let the client now which version of the
-     * article is getting.
-     */
-    header_version = mem->alloc(header_size);
-    snprintf(header_version, header_size - 1, "X-Minipedia-Version-Id: %i", id);
-
-    /* Register the buffers into the garbage collector */
-    gc->add(dr, doc);
-    gc->add(dr, header_version);
-
-    /* Compose the response and let the magic non-blocking work */
-    response->http_status(dr, 200);
-    response->http_header(dr, header_version);
-    response->http_content_type(dr, "html");
-    response->sendfile(dr, doc);
-    response->end(dr, NULL);
+    monkey->mem_free(bdl);
 }
 
 /* Main function, lets configure our service */
